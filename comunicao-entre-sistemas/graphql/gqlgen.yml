@@ -74,6 +74,12 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
+  Class:
+    model: 
+      - github.com/greg0x46/fc2-graphql/graph/model.Class
+  Animal:
+    model: 
+      - github.com/greg0x46/fc2-graphql/graph/model.Animal
   ID:
     model:
       - github.com/99designs/gqlgen/graphql.ID

@@ -2,20 +2,6 @@
 
 package model
 
-type Animal struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Type        *Class  `json:"type"`
-}
-
-type Class struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description,omitempty"`
-	Animals     []*Animal `json:"animals"`
-}
-
 type NewAnimal struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`

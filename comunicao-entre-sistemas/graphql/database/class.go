@@ -48,3 +48,15 @@ func (c *Class) FindAll() ([]Class, error) {
 
 	return classes, nil
 }
+
+func (c *Class) FindByAnimalId(animalID string) (Class, error) {
+	var id, name, description string
+	err := c.db.QueryRow("SELECT c.id, c.name, c.description FROM classes c JOIN animals a ON c.id = a.class_id WHERE a.id = $1", animalID).
+	Scan(&id, &name, &description)
+
+	if err != nil {
+		return Class{}, err
+	}
+
+	return Class{ID: id, Name: name, Description: description}, nil
+}

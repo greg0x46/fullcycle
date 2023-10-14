@@ -47,3 +47,23 @@ func (a *Animal) FindAll() ([]Animal, error) {
 
 	return animals, nil
 }
+
+func (a *Animal) FindByClassID(classID string) ([]Animal, error) {
+	rows, err := a.db.Query("SELECT id, name, description, class_id FROM animals WHERE class_id = $1", classID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	animals := []Animal{}
+	for rows.Next() {
+		var id, name, description, classId string
+		if rows.Scan(&id, &name, &description, &classId); err != nil {
+			return nil, err
+		}
+
+		animals = append(animals, Animal{ID: id, Name: name, Description: description, ClassID: classId})
+	}
+
+	return animals, nil
+}

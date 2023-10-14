@@ -10,6 +10,39 @@ import (
 	"github.com/greg0x46/fc2-graphql/graph/model"
 )
 
+// Type is the resolver for the type field.
+func (r *animalResolver) Type(ctx context.Context, obj *model.Animal) (*model.Class, error) {
+	class, err := r.ClassDB.FindByAnimalId(obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Class{
+		ID:          class.ID,
+		Name:        class.Name,
+		Description: &class.Description,
+	}, nil
+}
+
+// Animals is the resolver for the animals field.
+func (r *classResolver) Animals(ctx context.Context, obj *model.Class) ([]*model.Animal, error) {
+	animals, err := r.AnimalDB.FindByClassID(obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	var animalsModel []*model.Animal
+	for _, animal := range animals {
+		animalsModel = append(animalsModel, &model.Animal{
+			ID:          animal.ID,
+			Name:        animal.Name,
+			Description: &animal.Description,
+		})
+	}
+
+	return animalsModel, nil
+}
+
 // CreateClass is the resolver for the createClass field.
 func (r *mutationResolver) CreateClass(ctx context.Context, input model.NewClass) (*model.Class, error) {
 	class, err := r.ClassDB.Create(input.Name, *input.Description)
@@ -77,11 +110,19 @@ func (r *queryResolver) Animals(ctx context.Context) ([]*model.Animal, error) {
 	return animalsModel, nil
 }
 
+// Animal returns AnimalResolver implementation.
+func (r *Resolver) Animal() AnimalResolver { return &animalResolver{r} }
+
+// Class returns ClassResolver implementation.
+func (r *Resolver) Class() ClassResolver { return &classResolver{r} }
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+type animalResolver struct{ *Resolver }
+type classResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

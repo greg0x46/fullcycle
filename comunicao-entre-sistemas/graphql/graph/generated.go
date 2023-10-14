@@ -37,6 +37,8 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Animal() AnimalResolver
+	Class() ClassResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 }
@@ -70,6 +72,12 @@ type ComplexityRoot struct {
 	}
 }
 
+type AnimalResolver interface {
+	Type(ctx context.Context, obj *model.Animal) (*model.Class, error)
+}
+type ClassResolver interface {
+	Animals(ctx context.Context, obj *model.Class) ([]*model.Animal, error)
+}
 type MutationResolver interface {
 	CreateClass(ctx context.Context, input model.NewClass) (*model.Class, error)
 	CreateAnimal(ctx context.Context, input model.NewAnimal) (*model.Animal, error)
@@ -540,7 +548,7 @@ func (ec *executionContext) _Animal_type(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Type, nil
+		return ec.resolvers.Animal().Type(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -561,8 +569,8 @@ func (ec *executionContext) fieldContext_Animal_type(ctx context.Context, field 
 	fc = &graphql.FieldContext{
 		Object:     "Animal",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -723,7 +731,7 @@ func (ec *executionContext) _Class_animals(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Animals, nil
+		return ec.resolvers.Class().Animals(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -744,8 +752,8 @@ func (ec *executionContext) fieldContext_Class_animals(ctx context.Context, fiel
 	fc = &graphql.FieldContext{
 		Object:     "Class",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -3010,20 +3018,51 @@ func (ec *executionContext) _Animal(ctx context.Context, sel ast.SelectionSet, o
 		case "id":
 			out.Values[i] = ec._Animal_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Animal_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._Animal_description(ctx, field, obj)
 		case "type":
-			out.Values[i] = ec._Animal_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Animal_type(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3061,20 +3100,51 @@ func (ec *executionContext) _Class(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 			out.Values[i] = ec._Class_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Class_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._Class_description(ctx, field, obj)
 		case "animals":
-			out.Values[i] = ec._Class_animals(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Class_animals(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
