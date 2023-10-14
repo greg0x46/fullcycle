@@ -1,0 +1,34 @@
+type Class {
+  id: ID!
+  name: String!
+  description: String
+  animals: [Animal!]!
+}
+
+type Animal {
+  id: ID!,
+  name: String!
+  description: String,
+  type: Class!
+}
+
+input NewClass {
+  name: String!
+  description: String
+}
+
+input NewAnimal {
+  name: String!,
+  description: String,
+  classId: ID!
+}
+
+type Query {
+  classes: [Class!]!
+  animals: [Animal!]!
+}
+
+type Mutation {
+  createClass(input: NewClass!): Class!
+  createAnimal(input: NewAnimal!): Animal!
+}
